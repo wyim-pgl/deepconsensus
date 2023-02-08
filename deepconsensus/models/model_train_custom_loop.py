@@ -280,7 +280,10 @@ def train(out_dir: str,
   random.seed(params.seed)
   tf.random.set_seed(params.seed)
   os.environ['TF_ENABLE_EAGER_CLIENT_STREAMING_ENQUEUE'] = 'False'
-  while True:
+  max_attempts = 5
+  attempt = 0
+  while attempt < max_attempts:
+    attempt += 1
     try:
       if tpu is not None:
         resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu=tpu)
@@ -294,8 +297,8 @@ def train(out_dir: str,
       train_model(out_dir, params, strategy, write_checkpoint_metrics)
       break
     except tf.errors.UnavailableError:
-      continue
-
+      if attempt == max_attempts:
+        raise Exception("TPU not available after {} attempts".format(max_attempts))
 
 def main(unused_args=None):
   train(_OUT_DIR.value, FLAGS.params, _TPU.value, _TPU_TOPOLOGY.value,
